@@ -103,9 +103,13 @@ public:
             case 'H':
                 printHelp();
                 break;
-            case 'e':
-                exit(0);
+            case 27: // Escape
+                cout << "Na pewno chcesz wyjsc? t/n: ";
+                if ('t' == __getch()) {
+                    running = false;
+                }
                 break;
+
             default:
                 break;
         }
