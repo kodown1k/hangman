@@ -53,33 +53,52 @@ string newLine() {
 
 bool running = true;
 
-void drawHangman(int attempts) {
-    cout << "  +---+" << endl;
-    cout << "  |   |" << endl;
 
-    if (attempts >= 1) cout << "  O   |" << endl;
-    else cout << "      |" << endl;
+class Game {
+public:
+    int m_attempts = 0;
 
-    if (attempts == 2) cout << "  |   |" << endl;
-    else if (attempts == 3) cout << "  |\\  |" << endl;
-    else if (attempts >= 4) cout << " /|\\  |" << endl;
-    else cout << "      |" << endl;
+    void Display() {
+        drawHangman();
+    }
 
-    if (attempts == 5) cout << " /    |" << endl;
-    if (attempts >= 6) cout << " / \\  |" << endl;
-    else cout << "      |" << endl;
+    void addAttempt() {
+        ++m_attempts;
+    }
 
-    cout << "=========" << endl;
-}
+    void drawHangman() {
+        cout << "  +---+" << endl;
+        cout << "  |   |" << endl;
 
+        if (m_attempts >= 1) cout << "  O   |" << endl;
+        else cout << "      |" << endl;
+
+        if (m_attempts == 2) cout << "  |   |" << endl;
+        else if (m_attempts == 3) cout << "  |\\  |" << endl;
+        else if (m_attempts >= 4) cout << " /|\\  |" << endl;
+        else cout << "      |" << endl;
+
+        if (m_attempts == 5) cout << " /    |" << endl;
+        if (m_attempts >= 6) cout << " / \\  |" << endl;
+        else cout << "      |" << endl;
+
+        cout << "=========" << endl;
+    }
+};
 
 class InputManager {
 public:
-    void ProcessInput() const {
+    InputManager(Game &game): m_game(game) {
+    }
+
+    void ProcessInput() {
         if (!_kbhit()) return;
         char key = __getch();
 
         switch (key) {
+            case 's':
+                m_game.addAttempt();
+                break;
             case 'h':
             case 'H':
                 printHelp();
@@ -93,27 +112,23 @@ public:
     }
 
 private:
+    Game &m_game;
+
     static void printHelp() {
     };
 };
 
-class GameManager {
-public:
-    void Display() {
-        drawHangman(7);
-    }
-};
 
 int main() {
     InitNcurses();
 
-    InputManager inputManager;
-    GameManager gameManager;
+    Game game;
+    InputManager inputManager(game);
 
     while (running) {
         ClearScreen();
         inputManager.ProcessInput();
-        gameManager.Display();
+        game.Display();
 
         this_thread::sleep_for(chrono::milliseconds(50));
     }
