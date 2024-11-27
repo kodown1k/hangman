@@ -15,6 +15,10 @@ void ClearScreen() {
 void InitNcurses() {
 }
 
+int __cdecl __getch() {
+    return _getch();
+}
+
 #else
 
 #include <ncurses.h>
@@ -34,6 +38,10 @@ void InitNcurses() {
     noecho();
     cbreak();
     nodelay(stdscr, TRUE);
+}
+
+int __cdecl __getch() {
+    return getch();
 }
 #endif
 
@@ -69,12 +77,15 @@ class InputManager {
 public:
     void ProcessInput() const {
         if (!_kbhit()) return;
-        char key = getch();
+        char key = __getch();
 
         switch (key) {
             case 'h':
             case 'H':
                 printHelp();
+                break;
+            case 'e':
+                exit(0);
                 break;
             default:
                 break;
