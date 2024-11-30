@@ -112,14 +112,17 @@ class MenuStage : public AGameStage {
 public:
     MenuStage(AGame &game): AGameStage(game) {
         addKeyHandler('q', [&](char key) { running = false; });
-        addKeyHandler('n', [&](char key) {
+        addKeyHandler('1', [&](char key) {
             if (!m_game.m_word.empty()) {
                 cout << "Zagraj od nowa (t/n):" << endl;
                 if ('t' == __getch()) {
                     m_game.Reset();
                 }
             }
-            m_game.InitWord("buraki");
+            cout << "Wymysl sentencje do odgadniecia:" << endl;
+            string word;
+            getline(cin, word);
+            m_game.InitWord(word);
             m_game.Reset();
         });
         addKeyHandler('h', [&](char key) { ; });
@@ -132,10 +135,10 @@ public:
     }
 
     void Display() {
-        cout << "[a] attempt++" << endl;
-        cout << "[n] Wylosuj słowo" << endl;
-        cout << "[h] help" << endl;
-        cout << "[q] Exit" << endl;
+        cout << "[1] Zagraj" << endl;
+        cout << "[h] Pomoc" << endl;
+        cout << "[q] Wyjscie" << endl;
+        cout << "[Esc] Powrot" << endl;
     }
 };
 
@@ -169,8 +172,6 @@ public:
 
 class Game : public AGame {
 public:
-    unordered_map<char, function<void()> > m_keyHandlers;
-    unordered_map<int, function<void()> > m_stageHandlers;
     unordered_map<int, unique_ptr<AGameStage> > gameStageHandlers;
 
     void Display() {
@@ -190,14 +191,6 @@ public:
         }
 
         gameStageHandlers[m_gameStage]->ProcessInput(key);
-    }
-
-    void addKeyHandler(char key, function<void()> handler) {
-        m_keyHandlers[key] = std::move(handler);
-    }
-
-    void addStageHandler(int stage, function<void()> handler) {
-        m_stageHandlers[stage] = std::move(handler);
     }
 
     void addAttempt() {
