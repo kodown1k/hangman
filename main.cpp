@@ -57,10 +57,17 @@ string newLine() {
 
 bool running = true;
 
+enum GameStage {
+    Play = 0,
+    Lose = 1,
+    Win = 2,
+    Menu = 27
+};
+
 class AGame {
 public:
     int m_attempts = 0;
-    int m_gameStage = 27;
+    GameStage m_gameStage = Menu;
     string m_word;
 
     void InitWord(string word) {
@@ -69,28 +76,30 @@ public:
 
     void Reset() {
         m_attempts = 0;
-        m_gameStage = 0;
+        m_gameStage = Play;
         m_guessedLetters.clear();
     }
 
     vector<char> m_guessedLetters;
 
-    virtual void drawHangman() =0;
+    virtual void drawHangman() = 0;
 };
 
 class AGameStage {
 public:
+    virtual ~AGameStage() = default;
+
     AGameStage(AGame &game): m_game(game) {
         addKeyHandler('*', [](char key) {
         });
         addKeyHandler(27, [&](char key) {
-            m_game.m_gameStage = m_prevGameStage;
+            m_game.m_gameStage = static_cast<GameStage>(m_prevGameStage);
         });
     }
 
     int m_prevGameStage = -1;
 
-    void virtual Display() =0;
+    virtual void Display() = 0;
 
     void ProcessInput(char key) {
         if (m_keyHandlers.find(key) != m_keyHandlers.end()) {
@@ -154,19 +163,76 @@ public:
             } else {
                 m_game.m_attempts++;
             }
+            bool allGuessed = true;
+            for (char c: m_game.m_word) {
+                if (find(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), c) == m_game.m_guessedLetters.
+                    end()) {
+                    allGuessed = false;
+                    break;
+                }
+            }
+            if (allGuessed) {
+                m_gameStage = Win;
+            }
+            if (m_game.m_attempts >= 7) {
+                m_game.m_gameStage = Lose;
+            }
         });
     }
 
     void Display() {
         m_game.drawHangman();
-        for (char letter: m_game.m_word) {
-            if (count(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), letter)) {
-                cout << letter;
-            } else {
-                cout << '_';
+        if (m_gameStage == Win) {
+            for (size_t i = 0; i < m_game.m_word.length(); i++) {
+                char letter = m_game.m_word[i];
+                if (count(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), letter)) {
+                    cout << "\033[1;" << (31 + (i % 7)) << "m" << letter << "\033[0m";
+                } else {
+                    cout << '_';
+                }
+                cout.flush();
+                this_thread::sleep_for(chrono::milliseconds(100));
+            }
+            cout << endl << "Wygrana!!!";
+            this_thread::sleep_for(chrono::seconds(2));
+        } else {
+            for (char letter: m_game.m_word) {
+                if (count(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), letter)) {
+                    cout << letter;
+                } else {
+                    cout << '_';
+                }
             }
         }
         cout << endl;
+        if (m_gameStage > -1) {
+            m_game.m_gameStage = m_gameStage;
+        }
+    }
+
+private:
+    GameStage m_gameStage;
+};
+
+class LoseStage : public MenuStage {
+public:
+    LoseStage(AGame &game): MenuStage(game) {
+    }
+
+    void Display() {
+        MenuStage::Display();
+        cout << endl << "Przegrana!!!" << endl;
+    }
+};
+
+class WinStage : public MenuStage {
+public:
+    WinStage(AGame &game): MenuStage(game) {
+    }
+
+    void Display() {
+        MenuStage::Display();
+        cout << endl << "Wygrana!!!" << endl;
     }
 };
 
@@ -181,10 +247,10 @@ public:
     void processInput() {
         if (!_kbhit()) return;
         char key = __getch();
-        int tmpGameStage = m_gameStage;
+        GameStage tmpGameStage = m_gameStage;
         if (key == 27) {
             if (gameStageHandlers[m_gameStage]->m_prevGameStage < 0) {
-                m_gameStage = 27;
+                m_gameStage = Menu;
                 gameStageHandlers[m_gameStage]->m_prevGameStage = tmpGameStage;
                 return;
             }
@@ -217,8 +283,10 @@ public:
     }
 
     void InitHandlers() {
-        gameStageHandlers[27] = make_unique<MenuStage>(*this);
-        gameStageHandlers[0] = make_unique<PlayStage>(*this);
+        gameStageHandlers[Menu] = make_unique<MenuStage>(*this);
+        gameStageHandlers[Play] = make_unique<PlayStage>(*this);
+        gameStageHandlers[Lose] = make_unique<LoseStage>(*this);
+        gameStageHandlers[Win] = make_unique<WinStage>(*this);
     }
 };
 
