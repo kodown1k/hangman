@@ -255,7 +255,7 @@ public:
             if (allGuessed) {
                 m_gameStage = Win;
             }
-            if (m_game.m_attempts >= 7) {
+            if (m_game.m_attempts >= 6) {
                 m_game.m_gameStage = Lose;
             }
         });
