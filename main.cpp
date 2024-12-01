@@ -109,6 +109,7 @@ enum GameStage {
 class AGame {
 public:
     int m_attempts = 0;
+    int m_maxAttempts = 6;
     GameStage m_gameStage = Menu;
     string m_word;
 
@@ -255,7 +256,7 @@ public:
             if (allGuessed) {
                 m_gameStage = Win;
             }
-            if (m_game.m_attempts >= 6) {
+            if (m_game.m_attempts >= m_game.m_maxAttempts) {
                 m_game.m_gameStage = Lose;
             }
         });
