@@ -5,6 +5,9 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <fstream>
+#include <stdarg.h>
+
 
 #ifdef _WIN32
 
@@ -55,7 +58,46 @@ string newLine() {
     return NEWLINE;
 }
 
+string my_sprintf(const char *format, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    return string(buffer);
+}
+
 bool running = true;
+
+class FileHandler {
+public:
+    void SaveWord(const string &word, const string &filename) {
+        ofstream outFile(filename, ios::app); // Otwórz plik w trybie dopisywania
+        if (outFile.is_open()) {
+            outFile << word << endl; // Zapisz słowo w nowym wierszu
+            outFile.close();
+        } else {
+            cerr << "Nie można otworzyć pliku do zapisu!" << endl;
+        }
+    }
+
+    vector<string> LoadAllWords(const string &filename) {
+        ifstream inFile(filename);
+        vector<string> words;
+        string word;
+
+        if (inFile.is_open()) {
+            while (getline(inFile, word)) {
+                words.push_back(word);
+            }
+            inFile.close();
+        } else {
+            cerr << "Nie można otworzyć pliku do odczytu!" << endl;
+        }
+
+        return words;
+    }
+};
 
 enum GameStage {
     Play = 0,
@@ -123,7 +165,7 @@ public:
         addKeyHandler('q', [&](char key) { running = false; });
         addKeyHandler('1', [&](char key) {
             if (!m_game.m_word.empty()) {
-                cout << "Zagraj od nowa (t/n):" << endl;
+                cout << "Od nowa (t/n):" << endl;
                 if ('t' == __getch()) {
                     m_game.Reset();
                 }
@@ -131,7 +173,19 @@ public:
             cout << "Wymysl sentencje do odgadniecia:" << endl;
             string word;
             getline(cin, word);
+            saveCurrentWord(word);
             m_game.InitWord(word);
+            m_game.Reset();
+        });
+        addKeyHandler('2', [&](char key) {
+            if (!m_game.m_word.empty()) {
+                cout << "Od nowa (t/n):" << endl;
+                if ('t' == __getch()) {
+                    m_game.Reset();
+                }
+            }
+
+            m_game.InitWord(chooseWord());
             m_game.Reset();
         });
         addKeyHandler('h', [&](char key) { ; });
@@ -144,10 +198,36 @@ public:
     }
 
     void Display() {
-        cout << "[1] Zagraj" << endl;
-        cout << "[h] Pomoc" << endl;
+        cout << "[1] Zagraj z wlasnym slowem" << endl;
+        cout << "[2] Zagraj wybierajac slowo z listy" << endl;
         cout << "[q] Wyjscie" << endl;
         cout << "[Esc] Powrot" << endl;
+    }
+
+private:
+    static void saveCurrentWord(const string &word) {
+        FileHandler fileHandler;
+        fileHandler.SaveWord(word, "words.txt");
+    }
+
+    static string chooseWord() {
+        FileHandler fileHandler;
+        auto words = fileHandler.LoadAllWords("words.txt");
+        while (true) {
+            int i = 0;
+            cout << "Wybierz numer slowa:" << endl;
+            for (const string &word: words) {
+                cout << my_sprintf("[%d] %s", ++i, word.c_str()) << endl;
+            }
+            int index;
+            cin >> index;
+            if (index < 1 || index > words.size()) {
+                ClearScreen();
+                cout << "Wybierz poprawny numer slowa" << endl << endl;
+            } else {
+                return words[index - 1];
+            }
+        }
     }
 };
 
@@ -165,7 +245,8 @@ public:
             }
             bool allGuessed = true;
             for (char c: m_game.m_word) {
-                if (find(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), c) == m_game.m_guessedLetters.
+                if (find(m_game.m_guessedLetters.begin(), m_game.m_guessedLetters.end(), c) == m_game.
+                    m_guessedLetters.
                     end()) {
                     allGuessed = false;
                     break;
